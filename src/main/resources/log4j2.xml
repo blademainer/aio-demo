@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Configuration status="INFO" monitorInterval="300">
+    <properties>
+        <property name="LOG_HOME">logs</property>
+        <property name="APP_NAME">aio-demo</property>
+        <property name="FILE_NAME">${LOG_HOME}/${APP_NAME}-$${date:yyyy-MM-dd}.log</property>
+        <property name="FILE_PATTERN">${LOG_HOME}/$${date:yyyy-MM}/${APP_NAME}-%d{yyyy-MM-dd}-%i.log.gz</property>
+        <property name="FILE_PATTERN_LAYOUT">%d{yyyy-MM-dd HH:mm:ss.SSS} [%25t] %highlight{%-5level}{FATAL=bg_red,
+            ERROR=red, WARN=yellow, INFO=green, DEBUG=blue} %36logger{2.} - %msg%n
+        </property>
+        <property name="CONSOLE_PATTERN_LAYOUT">%d{yyyy-MM-dd HH:mm:ss.SSS} [%25t] %highlight{%-5level}{FATAL=bg_red,
+            ERROR=red, WARN=yellow, INFO=green, DEBUG=blue} %36logger{2.} - %msg%n
+        </property>
+    </properties>
+    <!--
+    Below is a sample configuration that uses a RollingFileAppender with both the time and size based triggering policies,
+    will create up to 100 archives on the same day (1-100) that are stored in a directory based on the current year and month,
+    and will compress each archive using gzip and will roll every hour. During every rollover,
+    this configuration will delete files that match "*/app-*.log.gz" and are 30 days old or older,
+    but keep the most recent 100 GB or the most recent 10 files, whichever comes first.
+    -->
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${CONSOLE_PATTERN_LAYOUT}"/>
+        </Console>
+        <!--<Console name="Console" target="SYSTEM_OUT">-->
+        <!--<PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>-->
+        <!--</Console>-->
+        <RollingRandomAccessFile name="RollingRandomAccessFile"
+                                 fileName="${FILE_NAME}"
+                                 filePattern="${FILE_PATTERN}"
+                                 immediateFlush="false" append="true">
+            <PatternLayout
+                    pattern="${FILE_PATTERN_LAYOUT}"/>
+            <!--pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %highlight{%level{WARN=W, DEBUG=D, ERROR=E, TRACE=T, INFO=I}}{FATAL=bg_red, ERROR=red, WARN=yellow, INFO=green, DEBUG=blue} %logger{36}.%method[%file:%line] - %msg%n"/>-->
+            <!--pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %highlight{%level{WARN=W, DEBUG=D, ERROR=E, TRACE=T, INFO=I}}{FATAL=bg_red, ERROR=red, WARN=yellow, INFO=green, DEBUG=blue} %logger{36} [%l] - %msg%n"/>-->
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="250 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="100">
+                <!--
+                Nested conditions: the inner condition is only evaluated on files
+                for which the outer conditions are true.
+                -->
+                <Delete basePath="${LOG_HOME}" maxDepth="2">
+                    <IfFileName glob="*/${APP_NAME}-*.log.gz">
+                        <IfLastModified age="365d">
+                            <IfAny>
+                                <IfAccumulatedFileSize exceeds="100 GB" />
+                                <IfAccumulatedFileCount exceeds="10" />
+                            </IfAny>
+                        </IfLastModified>
+                    </IfFileName>
+                </Delete>
+            </DefaultRolloverStrategy>
+            <!--<DefaultRolloverStrategy max="60"/>-->
+        </RollingRandomAccessFile>
+    </Appenders>
+
+    <Loggers>
+        <!-- pattern layout actually uses location, so we need to include it -->
+        <AsyncLogger name="com.xiongyingqi" level="DEBUG" includeLocation="true">
+            <AppenderRef ref="RollingRandomAccessFile"/>
+            <!--<AppenderRef ref="Console"/>-->
+        </AsyncLogger>
+    </Loggers>
+</Configuration>
